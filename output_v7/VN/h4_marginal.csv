@@ -1,0 +1,2 @@
+country,b_mfn,p_mfn,b_ren,b_h4,p_h4,ME_low,ME_mean,ME_high,ren_mean_pct,ren_std_pct,jn_threshold_pct,interpretation
+VN,5.88376,0.1244,-0.05758,2.89656,0.0905,4.544696,5.883755,7.222815,46.69,4.62,26.38,When renewable > 26.4%: tariff effect turns POSITIVE -> green transition buffers tariff harm ('green impetus')

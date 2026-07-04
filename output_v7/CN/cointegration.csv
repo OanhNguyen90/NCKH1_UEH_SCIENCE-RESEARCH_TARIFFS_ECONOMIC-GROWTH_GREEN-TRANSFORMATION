@@ -1,0 +1,4 @@
+cointegrated,stat,pvalue,cv_5pct,long_run_b,variable,hypothesis,country
+True,-3.3839,0.04,-3.34,0.99519,mfn_tariff,H1: GDP ~ MFN Tariff,CN
+True,-3.4929,0.04,-3.34,0.69547,trade_openness,H2: GDP ~ Trade Openness,CN
+True,-3.6272,0.04,-3.34,0.0606,renewable_pct,H3: GDP ~ Renewable Energy,CN

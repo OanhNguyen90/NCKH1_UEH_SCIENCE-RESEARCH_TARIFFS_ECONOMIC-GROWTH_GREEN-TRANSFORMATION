@@ -1,0 +1,3 @@
+period,forecast,actual,error,abs_error,ci_lo,ci_hi,in_95CI
+2026Q1,7.0314,5.4,1.6314,1.6314,2.3839,11.6788,True
+2026Q2,5.82,4.6,1.22,1.22,0.6641,10.9758,True

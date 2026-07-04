@@ -1,0 +1,150 @@
+{
+  "generated_at": "2026-06-30T16:00:07.479017",
+  "pipeline": "v7",
+  "data_sources": {
+    "api_loaded": [
+      "av_gdp"
+    ],
+    "embedded": [
+      "IMF WEO Apr 2025",
+      "WB WDI 2024",
+      "WTO TAO 2024"
+    ]
+  },
+  "countries": [
+    "VN",
+    "US",
+    "CN"
+  ],
+  "hist_period": "2018Q1-2025Q4",
+  "hist_obs": 32,
+  "validation_period": "2026Q1-Q2",
+  "forecast_period": "2026Q3-Q4",
+  "actuals_2026": {
+    "VN": {
+      "Q1": 6.93,
+      "Q2": 7.1
+    },
+    "US": {
+      "Q1": 2.0,
+      "Q2": 2.1
+    },
+    "CN": {
+      "Q1": 5.4,
+      "Q2": 4.6
+    }
+  },
+  "results": {
+    "VN": {
+      "ols": {
+        "r2": 0.8529,
+        "adj_r2": 0.8161,
+        "n": 31,
+        "k": 7,
+        "dw": 1.8163,
+        "lb_pval": 0.0282
+      },
+      "glsar": {
+        "rho": 0.0884,
+        "r2": 0.8522
+      },
+      "backtest": {
+        "rmse": 9.5982,
+        "ratio": 9.5519,
+        "fit_eval": "Heavy overfit",
+        "horizon": 1
+      },
+      "hypotheses": {
+        "H1_tariff_coef": 5.8838,
+        "H2_trade_coef": 0.1016,
+        "H3_renew_coef": -0.0576,
+        "H4_inter_coef": 2.8966,
+        "H4_JN_threshold%": 26.38
+      },
+      "forecast_2026": {
+        "Q1_fc": -7.7175,
+        "Q1_act": 6.93,
+        "Q2_fc": -12.0823,
+        "Q2_act": 7.1,
+        "Q1_inCI": false,
+        "Q2_inCI": false,
+        "Q3_fc": 4.3047,
+        "Q4_fc": null
+      }
+    },
+    "US": {
+      "ols": {
+        "r2": 0.6591,
+        "adj_r2": 0.5553,
+        "n": 31,
+        "k": 8,
+        "dw": 2.0321,
+        "lb_pval": 0.1741
+      },
+      "glsar": {
+        "rho": -0.1504,
+        "r2": 0.6559
+      },
+      "backtest": {
+        "rmse": 4.7587,
+        "ratio": 2.2468,
+        "fit_eval": "Moderate overfit",
+        "horizon": 1
+      },
+      "hypotheses": {
+        "H1_tariff_coef": -12.8506,
+        "H2_trade_coef": 1.4643,
+        "H3_renew_coef": 0.5991,
+        "H4_inter_coef": -26.4558,
+        "H4_JN_threshold%": 16.26
+      },
+      "forecast_2026": {
+        "Q1_fc": -0.3822,
+        "Q1_act": 2.0,
+        "Q2_fc": -0.9023,
+        "Q2_act": 2.1,
+        "Q1_inCI": true,
+        "Q2_inCI": true,
+        "Q3_fc": -0.3672,
+        "Q4_fc": null
+      }
+    },
+    "CN": {
+      "ols": {
+        "r2": 0.5394,
+        "adj_r2": 0.3993,
+        "n": 31,
+        "k": 8,
+        "dw": 1.987,
+        "lb_pval": 0.4535
+      },
+      "glsar": {
+        "rho": -0.289,
+        "r2": 0.5049
+      },
+      "backtest": {
+        "rmse": 6.0722,
+        "ratio": 3.036,
+        "fit_eval": "Heavy overfit",
+        "horizon": 1
+      },
+      "hypotheses": {
+        "H1_tariff_coef": -1.8906,
+        "H2_trade_coef": 0.5742,
+        "H3_renew_coef": 0.4763,
+        "H4_inter_coef": -5.8711,
+        "H4_JN_threshold%": 28.1
+      },
+      "forecast_2026": {
+        "Q1_fc": 7.0314,
+        "Q1_act": 5.4,
+        "Q2_fc": 5.82,
+        "Q2_act": 4.6,
+        "Q1_inCI": true,
+        "Q2_inCI": true,
+        "Q3_fc": 4.6363,
+        "Q4_fc": null
+      }
+    }
+  }
+}

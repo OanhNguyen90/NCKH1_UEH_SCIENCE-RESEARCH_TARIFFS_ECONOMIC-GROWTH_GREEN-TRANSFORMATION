@@ -1,0 +1,2 @@
+country,b_mfn,p_mfn,b_ren,b_h4,p_h4,ME_low,ME_mean,ME_high,ren_mean_pct,ren_std_pct,jn_threshold_pct,interpretation
+CN,-1.89061,0.2876,0.47625,-5.87111,0.0971,0.054158,-1.890606,-3.83537,31.32,3.31,28.1,When renewable < 28.1%: tariff effect is MORE NEGATIVE -> lack of green transition amplifies tariff harm ('double barrier')

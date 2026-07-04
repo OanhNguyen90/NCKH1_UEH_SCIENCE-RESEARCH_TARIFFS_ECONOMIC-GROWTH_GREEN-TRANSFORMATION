@@ -1,0 +1,2 @@
+n_obs,k_feat,r2,adj_r2,aic,bic,dw,lb_stat,lb_pval,bp_pval,jb_pval,rmse,mae,country
+31,8,0.6591,0.5553,153.85,165.32,2.0321,6.356,0.1741,0.2333,0.2003,2.2355,1.5763,US

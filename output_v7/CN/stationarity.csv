@@ -1,0 +1,10 @@
+variable,n_obs,adf_stat,adf_pval,kpss_stat,kpss_pval,adf_d1_pval,integration,transform
+gdp_growth,32,-3.6443,0.01,0.0771,0.2,0.0351,I(0),level
+mfn_tariff,32,-0.9476,0.2143,0.6956,0.05,0.01,I(1),diff1
+mfn_centered,32,-0.9476,0.2143,0.6956,0.05,0.01,I(1),diff1
+renewable_pct,32,0.8076,0.3371,0.8879,0.01,0.01,I(1),diff1
+ren_centered,32,0.8076,0.3371,0.8879,0.01,0.01,I(1),diff1
+h4_interaction,32,-0.2877,0.2605,0.2188,0.2,0.01,ambiguous,level
+trade_openness,32,-3.1665,0.0322,0.1037,0.2,0.01,I(0),level
+cpi_inflation,32,-0.5819,0.2399,0.7804,0.01,0.1664,I(1),diff1
+policy_rate,32,-0.5679,0.2408,0.8805,0.01,0.01,I(1),diff1
