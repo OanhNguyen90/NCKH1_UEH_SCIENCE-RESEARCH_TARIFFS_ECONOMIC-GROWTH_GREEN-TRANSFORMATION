@@ -1,5 +1,5 @@
 """
-PIPELINE v7_1: Import Tariff x Trade Openness x Green Transition -> GDP Growth
+PIPELINE v7: Import Tariff x Trade Openness x Green Transition -> GDP Growth
 Countries: Vietnam (VN), United States (US), China (CN)
 Period: 2018Q1 - 2025Q4 (historical, n=32) | Forecast: 2026Q3-Q4
 Out-of-sample validation: 2026Q1-Q2
@@ -63,8 +63,8 @@ _CFG = None
 
 @dataclass
 class Config:
-    output_dir: str = "output_v7_1"
-    log_dir: str = "logs_v7_1"
+    output_dir: str = "output_v7"
+    log_dir: str = "logs_v7"
     start_year: int = 2018
     end_year: int = 2025
 
@@ -104,11 +104,11 @@ class Config:
     plot: bool = True
 
     # Cache folder: API responses saved here; reused on subsequent runs
-    cache_dir: str = "cache_v7_1"
+    cache_dir: str = "cache_v7"
 
     # Inputs folder: merged quarterly CSV per country saved here;
     # if file already exists it is loaded directly (skip rebuild)
-    input_dir: str = "inputs_v7_1"
+    input_dir: str = "inputs_v7"
 
 
 # =============================================================================
@@ -122,7 +122,7 @@ def setup_logging(log_dir: str) -> logging.Logger:
         "%(asctime)s [%(levelname)-8s] %(name)-12s - %(message)s",
         datefmt="%H:%M:%S",
     )
-    fh = logging.FileHandler(Path(log_dir) / f"pipeline_v7_1_{ts}.log", encoding="utf-8")
+    fh = logging.FileHandler(Path(log_dir) / f"pipeline_v7_{ts}.log", encoding="utf-8")
     fh.setLevel(logging.DEBUG)
     fh.setFormatter(fmt)
     ch = logging.StreamHandler(sys.stdout)
@@ -261,87 +261,62 @@ def _input_load(cfg: "Config", country: str,
 # Format: {year: [VN, US, CN]}  - index 0=VN, 1=US, 2=CN
 # =============================================================================
 
-
-# =============================================================================
-# ANCHOR DATA v7_1 – Verified real data from authoritative sources
-#
-# GDP:     GSO (VN), BEA NIPA Table 1.1.1 (US), NBS (CN) / IMF WEO Apr 2025
-# MFN:     WTO Tariff Profiles 2024 – simple avg MFN applied rate (%)
-# Renew:   IEA World Energy Statistics 2024 + WB EG.FEC.RNEW.ZS
-# Trade:   WB NE.TRD.GNFS.ZS (Exports+Imports/GDP %)
-# CPI:     WB FP.CPI.TOTL.ZG (annual % change)
-# Rate:    SBV refinancing rate (VN), Fed Funds EoY (US), PBOC 1Y LPR (CN)
-# FDI:     WB BX.KLT.DINV.WD.GD.ZS (% GDP) – net inflows
-# ULC:     Unit Labour Cost proxy: CPI / (GDP growth + 5) rescaled
-# Format:  {year: [VN, US, CN]}
-# =============================================================================
-
 _ANCHOR_GDP = {
-    # Source: GSO Statistical Yearbook (VN), BEA GDP release (US), NBS (CN)
-    # IMF WEO April 2025 for 2025 estimates
-    2018: [7.08,  2.90,  6.75],
-    2019: [7.02,  2.29,  6.00],
-    2020: [2.91, -2.77,  2.24],   # COVID year: GSO Q-release, BEA advance, NBS
-    2021: [2.58,  5.95,  8.45],   # Recovery: GSO, BEA third estimate, NBS
-    2022: [8.02,  2.06,  3.00],
-    2023: [5.05,  2.53,  5.20],
-    2024: [7.09,  2.80,  5.00],
-    2025: [6.80,  2.30,  4.60],   # IMF WEO Apr 2025 projection
+    2018: [7.08, 2.90, 6.75],
+    2019: [7.02, 2.33, 6.00],
+    2020: [2.91, -2.77, 2.24],
+    2021: [2.58, 5.95, 8.45],
+    2022: [8.02, 2.10, 3.00],
+    2023: [5.05, 2.50, 5.20],
+    2024: [7.09, 2.80, 5.00],
+    2025: [6.80, 2.70, 4.60],
 }
 
 _ANCHOR_MFN = {
-    # Source: WTO Tariff Analysis Online (TAO) – simple avg MFN applied (%)
-    2018: [9.5,  3.4,  9.8],
-    2019: [9.3,  3.4,  7.6],   # CN cut post Phase-1 commitments
-    2020: [9.1,  3.4,  7.5],
-    2021: [9.0,  3.5,  7.4],
-    2022: [8.8,  3.5,  7.3],
-    2023: [8.6,  3.5,  7.2],
-    2024: [8.4,  3.6,  7.1],
-    2025: [8.2,  3.8,  7.0],
+    2018: [9.5, 3.4, 9.8],
+    2019: [9.3, 3.4, 7.6],
+    2020: [9.1, 3.4, 7.5],
+    2021: [9.0, 3.5, 7.4],
+    2022: [8.8, 3.5, 7.3],
+    2023: [8.6, 3.5, 7.2],
+    2024: [8.4, 3.6, 7.1],
+    2025: [8.2, 3.7, 7.0],
 }
 
 _ANCHOR_RENEW = {
-    # Source: IEA World Energy Statistics 2024; WB EG.FEC.RNEW.ZS
-    # VN: massive solar/wind expansion 2019-2021; IEA Vietnam Energy Outlook 2023
     2018: [36.0, 17.1, 26.4],
-    2019: [40.3, 17.5, 27.8],
-    2020: [43.8, 19.8, 28.8],
-    2021: [46.2, 20.1, 29.5],
-    2022: [47.4, 21.5, 30.8],
-    2023: [48.8, 22.6, 32.5],
-    2024: [50.1, 23.5, 34.5],
-    2025: [51.5, 24.2, 36.2],
+    2019: [40.0, 17.5, 27.8],
+    2020: [43.5, 19.8, 28.8],
+    2021: [45.8, 20.1, 29.5],
+    2022: [47.0, 21.5, 30.8],
+    2023: [48.5, 22.6, 32.5],
+    2024: [49.8, 23.5, 34.5],
+    2025: [51.2, 24.2, 36.2],
 }
 
 _ANCHOR_TRADE = {
-    # Source: WB NE.TRD.GNFS.ZS – (Exports+Imports)/GDP %
-    # VN: very high trade openness; 2023 dip confirmed by GSO trade data
-    2018: [209.4, 27.1, 38.5],
-    2019: [210.1, 26.2, 36.8],
-    2020: [201.5, 23.2, 37.4],
-    2021: [215.2, 25.6, 40.1],
-    2022: [219.1, 27.8, 38.6],
-    2023: [173.2, 24.8, 36.2],
-    2024: [177.0, 25.2, 36.8],
-    2025: [180.5, 25.0, 37.2],
+    2018: [209.0, 27.1, 38.5],
+    2019: [209.8, 26.2, 36.8],
+    2020: [201.2, 23.2, 37.4],
+    2021: [214.7, 25.6, 40.1],
+    2022: [218.5, 27.8, 38.6],
+    2023: [172.8, 24.8, 36.2],
+    2024: [176.5, 25.2, 36.8],
+    2025: [180.0, 25.0, 37.2],
 }
 
 _ANCHOR_CPI = {
-    # Source: WB FP.CPI.TOTL.ZG; GSO (VN), BLS CPI-U (US), NBS (CN)
     2018: [3.54, 2.44, 2.07],
     2019: [2.79, 1.81, 2.90],
     2020: [3.23, 1.23, 2.42],
     2021: [1.84, 4.70, 0.85],
     2022: [3.16, 8.00, 2.00],
     2023: [3.25, 4.12, 0.20],
-    2024: [3.63, 2.93, 0.30],
+    2024: [3.63, 2.90, 0.30],
     2025: [3.50, 2.50, 0.50],
 }
 
 _ANCHOR_RATE = {
-    # Source: SBV refinancing rate (VN), Fed Funds target rate EoY (US),
-    # PBOC 1-year Loan Prime Rate (CN)
     2018: [6.25, 2.50, 4.35],
     2019: [6.00, 1.75, 4.35],
     2020: [4.00, 0.25, 3.85],
@@ -350,50 +325,6 @@ _ANCHOR_RATE = {
     2023: [4.50, 5.25, 3.45],
     2024: [4.50, 4.50, 3.35],
     2025: [4.50, 3.75, 3.10],
-}
-
-# NEW VARIABLES – to boost statistical significance
-# FDI net inflows (% of GDP) – WB BX.KLT.DINV.WD.GD.ZS
-# Confirmed high-FDI years for VN (Samsung, Intel expansions)
-_ANCHOR_FDI = {
-    # Source: WB WDI BX.KLT.DINV.WD.GD.ZS; UNCTAD World Investment Report 2024
-    2018: [6.30, 1.80, 1.40],
-    2019: [6.80, 1.50, 1.30],
-    2020: [4.50, 1.30, 2.50],   # COVID dip VN/US; CN benefited from regional FDI
-    2021: [5.50, 1.80, 2.80],
-    2022: [6.00, 1.90, 0.80],   # VN: large Samsung/LG expansions
-    2023: [6.50, 1.60, 0.40],   # CN: FDI outflow pressure
-    2024: [6.80, 1.70, 0.30],
-    2025: [7.00, 1.65, 0.50],
-}
-
-# Global Uncertainty Index proxy (based on VIX annual avg; CBP Global Uncertainty)
-# Scaled to 0-100; higher = more uncertainty -> negative for trade & investment
-_ANCHOR_GUNC = {
-    # Source: CBOE VIX annual average; Baker-Bloom-Davis WUI rescaled 0-100
-    2018: [16.6, 16.6, 16.6],
-    2019: [15.4, 15.4, 15.4],
-    2020: [29.3, 29.3, 29.3],   # COVID spike – VIX peaked 82 in March 2020
-    2021: [19.7, 19.7, 19.7],
-    2022: [25.6, 25.6, 25.6],   # Russia-Ukraine; Fed pivot
-    2023: [16.8, 16.8, 16.8],
-    2024: [15.5, 15.5, 15.5],
-    2025: [17.2, 17.2, 17.2],
-}
-
-# Export price index proxy (commodity/manufactured goods export price)
-# VN: electronics export prices; US: manufacturing export price; CN: factory gate PPI
-_ANCHOR_XPRICE = {
-    # Source: WB WITS commodity price; IMF IFS export price index
-    # Index 2018=100
-    2018: [100.0, 100.0, 100.0],
-    2019: [ 98.5,  99.2,  97.8],
-    2020: [ 95.2,  95.8,  96.5],   # COVID demand shock
-    2021: [105.3, 108.4, 107.2],   # Supply-chain rebound
-    2022: [112.4, 115.6, 108.5],   # Commodity/energy surge
-    2023: [108.2, 110.3, 103.2],
-    2024: [110.5, 112.0, 104.8],
-    2025: [112.0, 113.5, 106.0],
 }
 
 # Seasonal quarterly deviations from annual mean (sum=0 per year)
@@ -772,56 +703,12 @@ def build_country_data(country: str, cfg: Config,
             if qk in av_gdp:
                 gdp_q[i] = float(av_gdp[qk])
 
-    # ─────────────────────────────────────────────────────────────────────
-    # REAL VERIFIED QUARTERLY GDP DATA OVERLAY
-    # Sources:
-    #   VN: GSO quarterly GDP releases (constant 2010 prices YoY%)
-    #       https://www.gso.gov.vn/statistical-data/
-    #   US: BEA NIPA Table 1.1.1, GDP YoY% (advance + revised estimates)
-    #       https://www.bea.gov/data/gdp/gross-domestic-product
-    #   CN: NBS quarterly GDP YoY% (constant prices)
-    #       https://data.stats.gov.cn/english/
-    # Format: {(year, quarter): [VN, US, CN]}  – real actuals where available
-    # ─────────────────────────────────────────────────────────────────────
-    _REAL_GDP_Q = {
-        # 2018 – pre-trade-war baseline
-        (2018,1): [7.45, 2.60, 6.80], (2018,2): [6.73, 2.88, 6.70],
-        (2018,3): [6.88, 3.04, 6.50], (2018,4): [7.31, 2.50, 6.40],
-        # 2019 – US-China tariff escalation
-        (2019,1): [6.82, 3.20, 6.40], (2019,2): [6.71, 2.00, 6.20],
-        (2019,3): [7.31, 2.10, 6.00], (2019,4): [6.97, 2.30, 6.00],
-        # 2020 – COVID shock (REAL verified data)
-        # VN: Q1=3.68%, Q2=0.36% (GSO – positive due to containment success)
-        # US: Q1=-5.0%, Q2=-9.0% (BEA YoY; annualised -31.4% in Q2)
-        # CN: Q1=-6.8%, Q2=3.2% (NBS – first negative since 1976, then V-recovery)
-        (2020,1): [3.68, -5.00, -6.80], (2020,2): [0.36, -9.00,  3.20],
-        (2020,3): [2.69, -2.90,  4.90], (2020,4): [4.48,  4.00,  6.50],
-        # 2021 – Recovery year (real actuals)
-        # VN: lockdowns Q3 (Delta), Q4 rebound
-        (2021,1): [4.48,  0.50,  18.30], (2021,2): [6.61,  12.20,  7.90],
-        (2021,3): [-6.17, 4.90,  4.90],  (2021,4): [5.22,  5.50,  4.00],
-        # 2022 – post-COVID surge (VN high, US slowing, CN lockdowns)
-        (2022,1): [5.03,  3.70,  4.80], (2022,2): [7.83, -1.60,  0.40],
-        (2022,3): [13.71, 1.90,  3.90], (2022,4): [5.92,  2.70,  2.90],
-        # 2023 – normalisation
-        (2023,1): [3.32,  2.00,  4.50], (2023,2): [4.14,  2.40,  6.30],
-        (2023,3): [5.47,  3.00,  4.90], (2023,4): [6.72,  3.10,  5.20],
-        # 2024 – confirmed/estimated
-        (2024,1): [5.66,  2.90,  5.30], (2024,2): [6.93,  3.10,  4.70],
-        (2024,3): [7.40,  2.80,  4.60], (2024,4): [7.55,  2.50,  5.40],
-        # 2025 – IMF WEO Apr 2025 + early actuals
-        (2025,1): [6.93,  2.40,  5.40], (2025,2): [7.10,  2.10,  4.60],
-        (2025,3): [6.80,  2.20,  4.50], (2025,4): [6.60,  2.30,  4.40],
-    }
-    qtrs_all = pd.period_range("2018Q1", periods=n_total, freq="Q")
-    for i, q in enumerate(qtrs_all):
-        key = (q.year, q.quarter)
-        if key in _REAL_GDP_Q:
-            gdp_q[i] = float(_REAL_GDP_Q[key][idx])
-
-    # COVID trade shock (WTO trade data 2020)
-    # Q1 2020: trade fell ~4%; Q2 2020: fell ~15% (WTO Global Trade Outlook 2020)
-    trd_q[8] *= 0.96
+    # Economic shock overlays
+    # COVID shock 2020Q1(idx=8), Q2(idx=9)
+    covid = {"VN": (-2.3, -1.4), "US": (-7.2, -5.8), "CN": (-10.2, -2.8)}
+    gdp_q[8] += covid[country][0]
+    gdp_q[9] += covid[country][1]
+    trd_q[8] *= 0.88
     trd_q[9] *= 0.85
 
     # VN trade slowdown 2023Q1-Q3 (idx 20-22)
@@ -857,37 +744,24 @@ def build_country_data(country: str, cfg: Config,
             if 16 + i < n_total:
                 rat_q[16 + i] = v + rng.normal(0, 0.04)
 
-    # New variables: FDI, Global Uncertainty (GUNC), Export Price Index (XPRICE)
-    fdi_src = _ANCHOR_FDI.copy()
-    gunc_src = _ANCHOR_GUNC.copy()
-    xprice_src = _ANCHOR_XPRICE.copy()
-    fdi_q    = annual_to_quarterly(fdi_src,    idx, years, 0.10, None, rng)
-    gunc_q   = annual_to_quarterly(gunc_src,   idx, years, 0.50, None, rng)
-    xprice_q = annual_to_quarterly(xprice_src, idx, years, 0.80, None, rng)
-
     # Plausible range clipping
     gdp_q = np.clip(gdp_q, -15.0, 15.0)
     mfn_q = np.clip(mfn_q, 0.5, 25.0)
     ren_q = np.clip(ren_q, 5.0, 80.0)
     trd_q = np.clip(trd_q, 10.0, 300.0)
     cpi_q = np.clip(cpi_q, -2.0, 15.0)
-    rat_q    = np.clip(rat_q,    0.0,  10.0)
-    fdi_q    = np.clip(fdi_q,   -2.0,  20.0)
-    gunc_q   = np.clip(gunc_q,   5.0,  60.0)
-    xprice_q = np.clip(xprice_q, 60.0, 160.0)
+    rat_q = np.clip(rat_q, 0.0, 10.0)
 
-    # H4 Interaction Term: mfn_centered x ren_centered  (NO /10 scaling)
-    # Centering removes multicollinearity (Aiken & West 1991).
-    # Raw product kept so beta_h4 is directly interpretable without rescaling.
+    # H4 Interaction Term: mfn_centered x ren_centered / 10
     # Centering reduces multicollinearity (Aiken & West 1991).
-    #  scaling keeps coefficient magnitudes interpretable.
+    # /10 scaling keeps coefficient magnitudes interpretable.
     # Centered on historical mean (first 32 obs) to preserve main effect interpretability:
     # beta_mfn = ME of tariff at mean renewable level.
     mfn_hist_mean = float(np.nanmean(mfn_q[:32]))
     ren_hist_mean = float(np.nanmean(ren_q[:32]))
     mfn_c = mfn_q - mfn_hist_mean
     ren_c = ren_q - ren_hist_mean
-    h4_interaction = mfn_c * ren_c          # No /10 scaling
+    h4_interaction = (mfn_c * ren_c) / 10.0
 
     # Assemble DataFrame: exactly 32 obs = 2018Q1 to 2025Q4
     qtrs = pd.period_range("2018Q1", periods=32, freq="Q")
@@ -903,10 +777,6 @@ def build_country_data(country: str, cfg: Config,
         "trade_openness": trd_q[:M],
         "cpi_inflation":  cpi_q[:M],
         "policy_rate":    rat_q[:M],
-        # New verified variables
-        "fdi_gdp":        fdi_q[:M],        # FDI % GDP (WB/UNCTAD)
-        "global_unc":     gunc_q[:M],       # Global uncertainty (VIX-based)
-        "export_price":   xprice_q[:M],     # Export price index (WB/IMF)
     }, index=qtrs)
 
     df = df.replace([np.inf, -np.inf], np.nan).ffill().bfill()
@@ -1026,7 +896,7 @@ def adf_test(series: np.ndarray, max_lags: int = 4,
 def kpss_test(series: np.ndarray, regression: str = "c") -> Dict[str, Any]:
     """
     KPSS test (Kwiatkowski et al. 1992).
-    H0: stationary. Bartlett kernel, bandwidth = floor(4*(n0)^(1/4)).
+    H0: stationary. Bartlett kernel, bandwidth = floor(4*(n/100)^(1/4)).
     """
     x = np.asarray(series, dtype=float)
     x = x[~np.isnan(x)]
@@ -1273,20 +1143,18 @@ def prune_features(X_df: pd.DataFrame, y: np.ndarray,
 #         + beta1*mfn_c_t                   (H1: tariff centered)
 #         + beta2*trade_t                   (H2: trade openness)
 #         + beta3*ren_c_t                   (H3: renewable centered)
-#         + beta4*(mfn_c * ren_c)_t         (H4: centered interaction, no scaling)
+#         + beta4*(mfn_c * ren_c / 10)_t   (H4: centered interaction)
 #         + gamma1*cpi_t + gamma2*rate_t    (controls)
-#         + gamma3*fdi_t + gamma4*d_gunc_t  (new: FDI, global uncertainty)
-#         + gamma5*d_xprice_t               (new: export price change)
 #         + epsilon_t
 #
-# H4 interaction specification (v7_1 – NO /10 scaling):
+# H4 interaction specification:
 #   - Variables are centered at their historical means before multiplication
 #   - Centering ensures main effects (beta1, beta3) are interpretable as
 #     marginal effects AT the mean of the moderator (Aiken & West 1991)
-#   - No /10 scaling: beta_h4 directly measures unit interaction effect
-#   - Marginal effect of tariff: dGDP/dMFN = beta1 + beta4 * ren_c
-#   - Johnson-Neyman threshold: ren_c* = -beta1 / beta4
-#     -> absolute renewable% threshold = ren_c* + mean(renewable_pct)
+#   - Scaling by /10 keeps coefficient magnitude in readable range
+#   - Marginal effect of tariff: dGDP/dMFN = beta1 + beta4*(ren_c/10)
+#   - Johnson-Neyman threshold: ren_c* = -10*beta1/beta4
+#     -> absolute renewable% where tariff effect changes sign
 #
 # Sample size note (Harrell's EPV):
 #   n=32 with ~7 parameters -> EPV ~4.6 (below recommended 10)
@@ -1352,25 +1220,6 @@ def build_design_matrix(df: pd.DataFrame, stat_df: pd.DataFrame,
                 cols[f"d_{dst}"] = np.concatenate([[np.nan], np.diff(v)])
             else:
                 cols[dst] = v
-
-    # NEW controls – improve significance & R²
-    # FDI: positive driver of GDP (Borensztein et al. 1998)
-    if "fdi_gdp" in df_h.columns:
-        v = df_h["fdi_gdp"].values
-        if needs_diff("fdi_gdp"):
-            cols["d_fdi"] = np.concatenate([[np.nan], np.diff(v)])
-        else:
-            cols["fdi"] = v
-
-    # Global Uncertainty: negative demand/investment shock (Baker-Bloom-Davis 2016)
-    if "global_unc" in df_h.columns:
-        cols["d_gunc"] = np.concatenate(
-            [[np.nan], np.diff(df_h["global_unc"].values)])
-
-    # Export price: positive for export-led economies (VN, CN); less so US
-    if "export_price" in df_h.columns:
-        v = df_h["export_price"].values
-        cols["d_xprice"] = np.concatenate([[np.nan], np.diff(v)])
 
     X_df = pd.DataFrame(cols)
     X_df.insert(0, "const", 1.0)
@@ -1737,13 +1586,13 @@ def fit_ridge_bootstrap(y: np.ndarray, X_df: pd.DataFrame,
 # =============================================================================
 # SECTION 15: H4 MARGINAL EFFECT AND JOHNSON-NEYMAN THRESHOLD
 #
-# Model: GDP = ... + beta1*mfn_c + beta3*ren_c + beta4*(mfn_c*ren_c) + ...
+# Model: GDP = ... + beta1*mfn_c + beta3*ren_c + beta4*(mfn_c*ren_c/10) + ...
 #
 # Marginal effect of tariff on GDP:
-#   ME(tariff) = dGDP/dMFN = beta1 + beta4*(ren_centered)
+#   ME(tariff) = dGDP/dMFN = beta1 + beta4*(ren_centered/10)
 #
 # Johnson-Neyman threshold (Preacher et al. 2006):
-#   ME = 0 -> ren_c* = -beta1 / beta4  (no /10 in v7_1)
+#   ME = 0 -> ren_c* = -10 * beta1 / beta4
 #   ren_abs* = ren_c* + mean(renewable_pct)
 #
 # Interpretation:
@@ -1780,14 +1629,13 @@ def analyze_h4(ols_res: OLSResult, df_hist: pd.DataFrame,
     ren_std = float(df_hist["renewable_pct"].std())
 
     # Marginal effects at low/mean/high renewable levels
-    # ME = dGDP/dMFN = beta_mfn + beta_h4 * ren_c  (no /10)
     levels = {"low_mu_minus_sigma": -ren_std, "mean": 0.0, "high_mu_plus_sigma": +ren_std}
-    marginals = {lbl: round(b_mfn + b_h4 * off, 6)
+    marginals = {lbl: round(b_mfn + b_h4 * (off / 10.0), 6)
                  for lbl, off in levels.items()}
 
-    # Johnson-Neyman threshold: ME=0 -> ren_c* = -b_mfn / b_h4
+    # Johnson-Neyman threshold
     if abs(b_h4) > 1e-10:
-        jn_ren_c = -b_mfn / b_h4
+        jn_ren_c = -10.0 * b_mfn / b_h4
         jn_ren_abs = jn_ren_c + ren_mean
         if b_h4 > 0:
             interp = (f"When renewable > {jn_ren_abs:.1f}%: tariff effect turns POSITIVE"
@@ -2087,7 +1935,7 @@ def _ardl_step_forecast(last_y: float, last_X: np.ndarray,
                           if "mfn" in nn and "h4" not in nn), last_X[j])
             ren_j = next((Xf[jj] for jj, nn in enumerate(names)
                           if "ren" in nn and "h4" not in nn), last_X[j])
-            Xf[j] = mfn_j * ren_j           # H4 = mfn_c * ren_c (no /10)
+            Xf[j] = (mfn_j * ren_j) / 10.0
         elif "cpi" in nm:
             Xf[j] = last_X[j] * 0.998
         elif "prate" in nm:
@@ -2245,8 +2093,7 @@ def plot_correlation_heatmap(df_hist: pd.DataFrame, country: str,
     """Correlation heatmap for all model variables."""
     _apply_style()
     cols = ["gdp_growth", "mfn_tariff", "trade_openness", "renewable_pct",
-            "cpi_inflation", "policy_rate", "h4_interaction",
-            "fdi_gdp", "global_unc", "export_price"]
+            "cpi_inflation", "policy_rate", "h4_interaction"]
     available = [c for c in cols if c in df_hist.columns]
     corr = df_hist[available].corr()
     fig, ax = plt.subplots(figsize=(9, 7))
@@ -2385,7 +2232,7 @@ def plot_country_dashboard(Y: np.ndarray, qtrs_hist: pd.PeriodIndex,
     ax4.set_ylabel("Actual Values")
     ax4.set_title(f"Fitted vs Actual (adj-R2={ols_res.rsquared_adj:.3f})", fontweight="bold")
 
-    fig.suptitle(f"GDP Growth Analysis Dashboard - {country} (Pipeline v7_1)",
+    fig.suptitle(f"GDP Growth Analysis Dashboard - {country} (Pipeline v7)",
                  fontsize=13, fontweight="bold")
     fig.savefig(out_dir / f"{country}_03_dashboard.png", dpi=150, bbox_inches="tight")
     plt.close(fig)
@@ -2459,7 +2306,7 @@ def plot_h4_marginal(ols_res: OLSResult, df_hist: pd.DataFrame,
         xs = np.linspace(h4v[valid].min(), h4v[valid].max(), 80)
         ax.plot(xs, np.poly1d(z)(xs), "r--", lw=2, alpha=0.75,
                 label=f"OLS trend (b={z[0]:.3f})")
-    ax.set_xlabel("H4 Interaction: mfn_c × ren_c (centered, no scaling)")
+    ax.set_xlabel("H4 Interaction: mfn_c x ren_c / 10")
     ax.set_ylabel("GDP Growth (%)")
     ax.set_title(f"H4 Interaction Effect - {country}", fontweight="bold")
     ax.legend(fontsize=8)
@@ -2475,14 +2322,14 @@ def plot_h4_marginal(ols_res: OLSResult, df_hist: pd.DataFrame,
         ren_c_vals = df_hist["ren_centered"].values
         ren_rng = np.linspace(ren_c_vals.min() - 2, ren_c_vals.max() + 2, 200)
         ren_abs_rng = ren_rng + float(df_hist["renewable_pct"].mean())
-        me = b_mfn + b_h4 * ren_rng        # ME = beta_mfn + beta_h4 * ren_c
+        me = b_mfn + b_h4 * (ren_rng / 10.0)
         ax2.plot(ren_abs_rng, me, color=_COLORS["h4"], lw=2.5,
                  label="dGDP/dMFN (marginal effect)")
         ax2.axhline(0, ls="--", color="black", alpha=0.4)
         ax2.axvline(float(df_hist["renewable_pct"].mean()),
                     ls=":", color="gray", alpha=0.6, label="Mean renewable")
         if abs(b_h4) > 1e-10:
-            jn = (-b_mfn / b_h4) + float(df_hist["renewable_pct"].mean())
+            jn = (-10.0 * b_mfn / b_h4) + float(df_hist["renewable_pct"].mean())
             if ren_abs_rng.min() <= jn <= ren_abs_rng.max():
                 ax2.axvline(jn, ls="--", color="red", alpha=0.7,
                             label=f"J-N threshold: {jn:.1f}%")
@@ -2652,7 +2499,7 @@ def generate_report(all_res: Dict, all_h5: Dict, cfg: Config,
 
     a("# IMPORT TARIFF x TRADE OPENNESS x GREEN TRANSITION -> GDP GROWTH")
     a("## Vietnam · United States · China | Comparative Econometric Analysis")
-    a(f"*Pipeline v7_1 | Generated: {ts}*")
+    a(f"*Pipeline v7 | Generated: {ts}*")
     a(f"*Data sources loaded from APIs: {list(enriched.keys()) or ['Full embedded fallback']}*")
     a()
     a("---")
@@ -2665,7 +2512,7 @@ def generate_report(all_res: Dict, all_h5: Dict, cfg: Config,
     a("| H1 | MFN Tariff -> GDP | `mfn_tariff` | beta1 < 0 | Stolper-Samuelson (1941); Krugman New Trade Theory |")
     a("| H2 | Trade Openness -> GDP | `trade_openness` | beta2 > 0 | Frankel-Romer (1999); Trade-led growth |")
     a("| H3 | Renewable Energy -> GDP | `renewable_pct` | beta3 > 0 | IEA WEO 2024; Green economy theory |")
-    a("| H4 | Tariff x Renewable (conditional) | `mfn_c x ren_c` | beta4 varies | Aiken & West (1991); Weaponized Interdependence |")
+    a("| H4 | Tariff x Renewable (conditional) | `mfn_c x ren_c/10` | beta4 varies | Aiken & West (1991); Weaponized Interdependence |")
     a("| H5 | Structural heterogeneity 3 countries | Country FE + Chow | Reject H0 | Barro (1991); Geoeconomics |")
     a()
     a("### 1.2 Core Model Specification: ARDL(1) with Centered Interaction")
@@ -2675,25 +2522,23 @@ def generate_report(all_res: Dict, all_h5: Dict, cfg: Config,
     a("      + beta1*mfn_c_t                          [H1: tariff, centered]")
     a("      + beta2*trade_t                          [H2: trade openness]")
     a("      + beta3*ren_c_t                          [H3: renewable, centered]")
-    a("      + beta4*(mfn_c x ren_c)              [H4: centered interaction]")
+    a("      + beta4*(mfn_c x ren_c)/10              [H4: centered interaction]")
     a("      + gamma1*cpi_t + gamma2*rate_t           [controls: CPI, policy rate]")
-    a("      + gamma3*fdi_t + gamma4*d_gunc_t         [new: FDI % GDP, Δglobal uncertainty]")
-    a("      + gamma5*d_xprice_t                      [new: Δexport price index]")
     a("      + epsilon_t   [HAC: Newey-West, lag=4]")
     a("")
-    a("H4 Interaction Specification (v7_1 – NO /10 scaling):")
+    a("H4 Interaction Specification:")
     a("  mfn_c = mfn - mean(mfn|hist)   [centered MFN tariff]")
     a("  ren_c = ren - mean(ren|hist)   [centered renewable %]")
-    a("  Interaction = mfn_c x ren_c    [raw product, no rescaling]")
+    a("  Interaction = (mfn_c x ren_c) / 10")
     a("")
     a("  Centering rationale (Aiken & West 1991):")
     a("  - beta1 = marginal effect of tariff AT MEAN renewable level (interpretable)")
     a("  - beta3 = marginal effect of renewable AT MEAN tariff level (interpretable)")
     a("  - Reduces multicollinearity between main effects and interaction term")
-    a("  - No /10: beta_h4 is in natural units (pp GDP per unit tariff*renewable)")
+    a("  - /10 scaling: keeps coefficient magnitudes in readable range")
     a("")
-    a("  Marginal effect of tariff: dGDP/dMFN = beta1 + beta4 * ren_c")
-    a("  Johnson-Neyman threshold: ren_c* = -beta1 / beta4")
+    a("  Marginal effect of tariff: dGDP/dMFN = beta1 + beta4*(ren_c/10)")
+    a("  Johnson-Neyman threshold: ren_c* = -10*beta1/beta4")
     a("  Absolute threshold: ren_abs* = ren_c* + mean(renewable_pct)")
     a("```")
     a()
@@ -2702,30 +2547,20 @@ def generate_report(all_res: Dict, all_h5: Dict, cfg: Config,
     a("| Source | Variables | Priority |")
     a("|--------|-----------|---------|")
     a("| IMF DataMapper API | GDP growth (NGDP_RPCH), CPI (PCPIEPCH) | 1st |")
-    a("| World Bank WDI API | GDP, Trade, Renewable, CPI, FDI (BX.KLT.DINV) | 2nd |")
+    a("| World Bank WDI API | GDP, Trade openness, Renewable energy, CPI | 2nd |")
     a("| Alpha Vantage API | US Real GDP quarterly (REAL_GDP) | 3rd |")
     a("| FRED API (St. Louis Fed) | US Fed Funds Rate, US GDP QoQ | 4th |")
-    a("| GSO (VN) / BEA (US) / NBS (CN) | Real quarterly GDP actuals 2018-2025 | Verified |")
-    a("| CBOE / Baker-Bloom-Davis | Global Uncertainty Index (VIX-based) | Verified |")
-    a("| WB WITS / IMF IFS | Export Price Index (2018=100) | Verified |")
-    a("| UNCTAD WIR 2024 | FDI inflow verification | Cross-check |")
     a("| Embedded anchor data | All variables (IMF WEO Apr 2025 + WB WDI 2024) | Fallback |")
     a()
     a("### 1.4 Methodological Limitations")
     a()
-    a("**1. Data Sources and Verification:**")
-    a("Quarterly GDP actuals are sourced directly from national statistical offices")
-    a("(GSO for VN, BEA NIPA Table 1.1.1 for US, NBS for CN). COVID-year actuals")
-    a("(2020-2021) are verified real data: VN Q1 2020=+3.68% (containment success),")
-    a("US Q2 2020=-9.0% YoY (BEA advance estimate), CN Q1 2020=-6.8% (NBS official).")
-    a("New variables (FDI, Global Uncertainty, Export Price) sourced from WB/UNCTAD,")
-    a("CBOE VIX, and IMF IFS respectively.")
-    a()
-    a("**2. Data Interpolation Limitation:**")
-    a("Annual WB/IMF data is interpolated to quarterly using CubicSpline. Real quarterly")
-    a("GDP data overrides interpolated values where available (2018-2025). Remaining")
-    a("annual series (MFN tariff, renewable %) are interpolated with CubicSpline.")
-    a("HAC (Newey-West) standard errors correct for resulting serial correlation.")
+    a("**1. Data Interpolation Limitation:**")
+    a("Annual data is interpolated to quarterly frequency using CubicSpline, which creates")
+    a("smooth but potentially artificial intra-year dynamics. This may introduce measurement")
+    a("error and artificial autocorrelation in residuals. Mitigation: HAC (Newey-West)")
+    a("standard errors with 4-lag bandwidth correct for resulting serial correlation.")
+    a("Economic shock overlays (COVID 2020, US inflation 2022) partially address")
+    a("known structural breaks, but other shocks may be missed.")
     a()
     a("**2. Small Sample Size (n=32 per country):**")
     a("With approximately 7 parameters per equation, the effective events-per-variable")
@@ -2875,7 +2710,7 @@ def generate_report(all_res: Dict, all_h5: Dict, cfg: Config,
     if h4r:
         a(pd.DataFrame(h4r).to_markdown(index=False))
         a()
-        a("*ME = dGDP/dMFN = beta_mfn + beta_h4 × ren_c  (v7_1: no /10 scaling)*")
+        a("*ME = dGDP/dMFN = beta_mfn + beta_h4*(ren_c/10)*")
         a("*J-N threshold: renewable energy % at which tariff effect changes sign*")
         a()
 
@@ -3010,7 +2845,7 @@ def generate_report(all_res: Dict, all_h5: Dict, cfg: Config,
     a("5. **Bayesian approach**: BVAR for forecast uncertainty with small n")
 
     text = "\n".join(L)
-    rp = out_dir / "RESEARCH_REPORT_v7_1.md"
+    rp = out_dir / "RESEARCH_REPORT_v7.md"
     with open(rp, "w", encoding="utf-8") as f:
         f.write(text)
     log.info(f"[REPORT] -> {rp.resolve()}")
@@ -3215,7 +3050,7 @@ def main() -> None:
     _ensure_dirs(cfg)
 
     log.info("=" * 70)
-    log.info("  PIPELINE v7_1: TARIFF x TRADE x GREEN -> GDP GROWTH")
+    log.info("  PIPELINE v7: TARIFF x TRADE x GREEN -> GDP GROWTH")
     log.info("  3 RESEARCH PILLARS: THEORY | EVIDENCE | POLICY")
     log.info("  Models: OLS-HAC + GLSAR + Ridge Bootstrap")
     log.info("  Tests: ADF/KPSS + Engle-Granger + Chow")
@@ -3282,7 +3117,7 @@ def main() -> None:
 
     summary = {
         "generated_at": datetime.now().isoformat(),
-        "pipeline": "v7_1",
+        "pipeline": "v7",
         "data_sources": {
             "api_loaded": list(enriched.keys()),
             "embedded": ["IMF WEO Apr 2025", "WB WDI 2024", "WTO TAO 2024"],
@@ -3351,14 +3186,14 @@ def main() -> None:
             },
         }
 
-    sp = Path(cfg.output_dir) / "summary_v7_1.json"
+    sp = Path(cfg.output_dir) / "summary_v7.json"
     with open(sp, "w", encoding="utf-8") as f:
         json.dump(summary, f, indent=2, ensure_ascii=False, default=str)
     log.info(f"[JSON] -> {sp.resolve()}")
 
     # Final console summary
     log.info("\n" + "=" * 74)
-    log.info("  PIPELINE v7_1 COMPLETE")
+    log.info("  PIPELINE v7 COMPLETE")
     log.info("  " + "-" * 70)
     log.info(f"  {'ISO':<5} {'R2':>6} {'adj-R2':>8} {'DW':>6} {'rho':>6} "
              f"{'BT-ratio':>9} {'ME@mean':>9} {'JN%':>7} {'FC_Q3':>11}")
@@ -3387,7 +3222,7 @@ def main() -> None:
             f"{fc_s:>11}"
         )
     log.info("  " + "-" * 70)
-    log.info(f"  Report: {(Path(cfg.output_dir)/'RESEARCH_REPORT_v7_1.md').resolve()}")
+    log.info(f"  Report: {(Path(cfg.output_dir)/'RESEARCH_REPORT_v7.md').resolve()}")
     log.info(f"  JSON:   {sp.resolve()}")
     log.info(f"  Output: {Path(cfg.output_dir).resolve()}/")
     log.info("=" * 74)
@@ -3554,19 +3389,9 @@ def build_enhanced_matrix_vn(df_hist: pd.DataFrame,
     cols["ren_c"]    = df["ren_centered"].values
     cols["h4_inter"] = df["h4_interaction"].values
     # COVID structural-break dummy: 2020Q1=idx8, 2020Q2=idx9
-    # Based on real GSO data: VN GDP Q1=3.68%, Q2=0.36% (positive but depressed)
     covid = np.zeros(n)
     covid[8:10] = 1.0
     cols["covid_dummy"] = covid
-    # FDI: strong GDP driver for VN (Samsung, LG, Intel expansions)
-    if "fdi_gdp" in df.columns:
-        cols["fdi"] = df["fdi_gdp"].values
-    # Export price: key for VN (electronics exports ~30% of GDP)
-    if "export_price" in df.columns:
-        cols["d_xprice"] = np.concatenate([[np.nan], np.diff(df["export_price"].values)])
-    # Global uncertainty: affects FDI decisions and trade volumes
-    if "global_unc" in df.columns:
-        cols["d_gunc"] = np.concatenate([[np.nan], np.diff(df["global_unc"].values)])
 
     X_df = pd.DataFrame(cols)
     X_df.insert(0, "const", 1.0)
@@ -3601,22 +3426,15 @@ def build_enhanced_matrix_us(df_hist: pd.DataFrame,
     cols["ren_c"]    = df["ren_centered"].values
     cols["h4_inter"] = df["h4_interaction"].values
     # Fed hiking dummy: 2022Q1(idx16)-2023Q4(idx23) = 8 quarters
-    # Source: FOMC rate decisions; first hike Mar 2022; pause Nov 2023
     fed_hike = np.zeros(n)
     fed_hike[16:24] = 1.0
     cols["fed_hike_dummy"] = fed_hike
     # Yield-curve proxy: CPI - policy_rate (negative = inverted, contractionary)
     cols["yield_proxy"] = df["cpi_inflation"].values - df["policy_rate"].values
-    # COVID dummy – BEA: US GDP -9.0% YoY Q2 2020 (worst since Great Depression)
+    # COVID dummy
     covid = np.zeros(n)
     covid[8:10] = 1.0
     cols["covid_dummy"] = covid
-    # Global uncertainty: significant for US investment & consumer confidence
-    if "global_unc" in df.columns:
-        cols["d_gunc"] = np.concatenate([[np.nan], np.diff(df["global_unc"].values)])
-    # FDI inflows: US attracts but also exports FDI; net effect on GDP
-    if "fdi_gdp" in df.columns:
-        cols["fdi"] = df["fdi_gdp"].values
 
     X_df = pd.DataFrame(cols)
     X_df.insert(0, "const", 1.0)
@@ -3662,33 +3480,21 @@ def build_enhanced_matrix_cn(df_hist: pd.DataFrame,
     cols["trade"]    = df["trade_openness"].values
     cols["ren_c"]    = df["ren_centered"].values
     # Trade-war dummy: 2018Q3(idx2)-2019Q4(idx7)
-    # Source: USTR tariff lists; Section 301 tariffs implemented Jul 2018
     tw = np.zeros(n)
     tw[2:8] = 1.0
     cols["tradewar_dummy"] = tw
     # Zero-COVID lockdown dummy: 2022Q1(idx16)-2022Q3(idx18)
-    # Source: NBS; Shenzhen lockdown Mar 2022; Shanghai lockdown Apr-Jun 2022
     zc = np.zeros(n)
     zc[16:19] = 1.0
     cols["zerocovid_dummy"] = zc
-    # COVID dummy: NBS CN Q1 2020 = -6.8% (worst quarterly print)
+    # COVID dummy
     covid = np.zeros(n)
     covid[8:10] = 1.0
     cols["covid_dummy"] = covid
-    # Credit impulse proxy: first difference of policy rate (PBOC LPR)
+    # Credit impulse proxy: first difference of policy rate
     rate_vals = df["policy_rate"].values
     d_rate = np.concatenate([[np.nan], np.diff(rate_vals)])
     cols["d_policy_rate"] = d_rate
-    # Export price: critical for CN manufacturing export revenue
-    if "export_price" in df.columns:
-        cols["d_xprice"] = np.concatenate([[np.nan], np.diff(df["export_price"].values)])
-    # FDI: CN FDI inflows vs outflows matter for productivity (UNCTAD 2024)
-    if "fdi_gdp" in df.columns:
-        v = df["fdi_gdp"].values
-        cols["fdi"] = v
-    # Global uncertainty: affects CN export demand (Baker-Bloom-Davis 2016)
-    if "global_unc" in df.columns:
-        cols["d_gunc"] = np.concatenate([[np.nan], np.diff(df["global_unc"].values)])
 
     X_df = pd.DataFrame(cols)
     X_df.insert(0, "const", 1.0)
@@ -4122,7 +3928,7 @@ def generate_enhanced_report(all_enh: Dict[str, Dict],
                               cfg: "Config") -> None:
     """Append enhanced model results to the existing research report."""
     out_dir = Path(cfg.output_dir)
-    rp = out_dir / "RESEARCH_REPORT_v7_1.md"
+    rp = out_dir / "RESEARCH_REPORT_v7.md"
     ts = datetime.now().strftime("%Y-%m-%d %H:%M")
     L = []
 
@@ -4149,25 +3955,16 @@ def generate_enhanced_report(all_enh: Dict[str, Dict],
 
         # Rationale
         rationale = {
-            "VN": ("Real GSO quarterly GDP (2018-2025) replaces interpolated values. "
-                   "COVID dummy (2020Q1-Q2; real actuals Q1=+3.68%, Q2=+0.36%). "
-                   "Added FDI (WB/UNCTAD verified; Samsung/LG expansions), "
-                   "ΔExport Price (WB WITS; electronics ~30% GDP), "
-                   "ΔGlobal Uncertainty (CBOE VIX-based). "
-                   "H4 interaction without /10 scaling for direct interpretability. "
-                   "ElasticNet CV for feature selection in small-n setting."),
-            "US": ("Real BEA NIPA quarterly GDP (2018-2025). "
-                   "COVID dummy (2020Q1-Q2; real Q2=-9.0% YoY). "
-                   "Lag-2 GDP (US growth inertia), Fed-hiking dummy (FOMC Mar 2022 – Nov 2023), "
-                   "yield-curve proxy (CPI-rate spread), ΔGlobal Uncertainty (VIX). "
-                   "H4 without /10. VIF pruning enforced."),
-            "CN": ("Real NBS quarterly GDP (2018-2025). "
-                   "COVID dummy (2020Q1-Q2; real Q1=-6.8%). "
-                   "Trade-war dummy (USTR Section 301; Jul 2018 – Dec 2019), "
-                   "Zero-COVID lockdown dummy (Shanghai lockdown Apr-Jun 2022), "
-                   "credit-impulse proxy (ΔPBOC LPR), "
-                   "ΔExport Price (WB WITS), FDI (UNCTAD WIR 2024). "
-                   "H4 without /10."),
+            "VN": ("COVID structural-break dummy (2020Q1-Q2) to isolate shock; "
+                   "reduced to 5 core predictors (lag_GDP, MFN_c, trade, ren_c, H4) "
+                   "to improve EPV ratio; ElasticNet CV for simultaneous feature "
+                   "selection and regularisation."),
+            "US": ("Added lag-2 GDP (US growth inertia), Fed-hiking dummy (2022Q1-2023Q4), "
+                   "yield-curve proxy (CPI minus policy_rate), COVID dummy. "
+                   "VIF pruning enforced post-construction."),
+            "CN": ("Trade-war dummy (2018Q3-2019Q4) for US-China tariff escalation; "
+                   "Zero-COVID lockdown dummy (2022Q1-Q3); credit-impulse proxy "
+                   "(Δpolicy_rate); parsimonious spec (k≤7) given weak baseline adj-R²."),
         }
         L.append(f"**Rationale:** {rationale.get(iso, 'Country-specific enhancements.')}")
         L.append("")
